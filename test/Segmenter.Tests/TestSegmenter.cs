@@ -108,17 +108,32 @@ namespace JiebaNet.Segmenter.Tests
         public void TestTokenize()
         {
             var seg = new JiebaSegmenter();
-            seg.AddWord("机器学习");
-            seg.AddWord("自然语言处理");
             foreach (var token in seg.Tokenize("小明最近在学习机器学习、自然语言处理、云计算和大数据"))
             {
                 Console.WriteLine(token);
             }
+            Console.WriteLine();
 
             foreach (var token in seg.Tokenize("小明最近在学习机器学习、自然语言处理、云计算和大数据", TokenizerMode.Search))
             {
                 Console.WriteLine(token);
             }
+        }
+
+        [TestCase]
+        public void TestTokenizeWithSpace()
+        {
+            var seg = new JiebaSegmenter();
+
+            var s = "永和服装饰品有限公司";
+            var tokens = seg.Tokenize(s).ToList();
+            Assert.That(tokens.Count, Is.EqualTo(4));
+            Assert.That(tokens.Last().EndIndex, Is.EqualTo(s.Length));
+
+            s = "永和服装饰品 有限公司";
+            tokens = seg.Tokenize(s).ToList();
+            Assert.That(tokens.Count, Is.EqualTo(5));
+            Assert.That(tokens.Last().EndIndex, Is.EqualTo(s.Length));
         }
 
         private static void TestCutThenPrint(JiebaSegmenter segmenter, string s)
@@ -140,6 +155,30 @@ namespace JiebaNet.Segmenter.Tests
             segments = seg.Cut(s);
             Assert.That(segments, Contains.Item("机器学习"));
             Assert.That(segments, Is.Not.Contains("机器"));
+
+            // reset dict otherwise other test cases would be affected.
+            seg.DeleteWord("机器学习");
+        }
+
+        [TestCase]
+        public void TestDeleteWord()
+        {
+            var seg = new JiebaSegmenter();
+            var s = "小明最近在学习机器学习和自然语言处理";
+
+            var segments = seg.Cut(s);
+            Assert.That(segments, Contains.Item("机器"));
+            Assert.That(segments, Is.Not.Contains("机器学习"));
+
+            seg.AddWord("机器学习");
+            segments = seg.Cut(s);
+            Assert.That(segments, Contains.Item("机器学习"));
+            Assert.That(segments, Is.Not.Contains("机器"));
+
+            seg.DeleteWord("机器学习");
+            segments = seg.Cut(s);
+            Assert.That(segments, Contains.Item("机器"));
+            Assert.That(segments, Is.Not.Contains("机器学习"));
         }
 
         [TestCase]
@@ -238,6 +277,25 @@ namespace JiebaNet.Segmenter.Tests
         }
 
         [TestCase]
+        public void TestPercentages()
+        {
+            var seg = new JiebaSegmenter();
+            
+            var s = "看上去iphone8手机样式很赞,售价699美元,销量涨了5%么？";
+            var segments = seg.Cut(s);
+            Assert.That(segments, Contains.Item("5%"));
+            foreach (var sm in segments)
+            {
+                Console.WriteLine(sm);
+            }
+
+            s = "pi的值是3.14，这是99.99%的人都知道的。";
+            segments = seg.Cut(s);
+            Assert.That(segments, Contains.Item("3.14"));
+            Assert.That(segments, Contains.Item("99.99%"));
+        }
+
+        [TestCase]
         [Category("Issue")]
         public void TestEnglishWordsCut()
         {
@@ -250,6 +308,19 @@ namespace JiebaNet.Segmenter.Tests
             CollectionAssert.AreEqual(new[] { text }, seg.Cut(text));
             text = "HelloWorldlee";
             CollectionAssert.AreEqual(new[] { text }, seg.Cut(text));
+        }
+
+        [Test]
+        public void TestWordFreq()
+        {
+            var s = "在数学和计算机科学之中，算法（algorithm）为任何良定义的具体计算步骤的一个序列，常用于计算、数据处理和自动推理。精确而言，算法是一个表示为有限长列表的有效方法。算法应包含清晰定义的指令用于计算函数。";
+            var seg = new JiebaSegmenter();
+            var freqs = new Counter<string>(seg.Cut(s));
+            // TODO: use stopwords.
+            foreach (var pair in freqs.MostCommon(5))
+            {
+                Console.WriteLine($"{pair.Key}: {pair.Value}");
+            }
         }
 
         #region Private Helpers

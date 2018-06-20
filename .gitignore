@@ -194,3 +194,6 @@ FakesAssemblies/
 
 # Visual Studio 6 workspace options file
 *.opt
+_bin/
+_Nuget/NuGet.exe
+snks/*.snk
